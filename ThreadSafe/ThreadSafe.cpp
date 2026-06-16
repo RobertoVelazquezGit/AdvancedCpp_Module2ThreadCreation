@@ -1,20 +1,55 @@
-// ThreadSafe.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
 #include <iostream>
+#include <thread>
+#include <mutex>
+#include <vector>
+#include <atomic>
+#include <chrono>
+#include <random>
 
-int main()
-{
-    std::cout << "Hello World!\n";
+std::mutex dataMutex;
+std::vector<double> sharedData;
+std::atomic<int> processedCount{ 0 };
+
+void dataProcessor(int processorId, int itemCount) {
+
+    if(processorId == 2) {
+		int n = 0;  
+	}   
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(1.0, 100.0);
+
+    for (int i = 0; i < itemCount; ++i) {
+        double value = dis(gen);
+
+        {
+            std::lock_guard<std::mutex> lock(dataMutex);
+            sharedData.push_back(value);
+        }
+
+        processedCount.fetch_add(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    std::cout << "Processor " << processorId << " completed\n";
 }
 
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
+int main() {
+    std::vector<std::thread> threads;
 
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
+    // Create 5 threads, each processing 20 items
+    for (int i = 0; i < 5; ++i) {
+        threads.emplace_back(dataProcessor, i, 20);
+    }
+
+    // Wait for all threads to complete
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    std::cout << "Total processed: " << processedCount.load() << std::endl;
+    std::cout << "Data size: " << sharedData.size() << std::endl;
+
+    return 0;
+}
