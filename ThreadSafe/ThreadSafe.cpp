@@ -5,20 +5,24 @@
 #include <atomic>
 #include <chrono>
 #include <random>
+#include <string>
+#include <Windows.h>
 
 std::mutex dataMutex;
 std::vector<double> sharedData;
 std::atomic<int> processedCount{ 0 };
 
 void dataProcessor(int processorId, int itemCount) {
-
-    if(processorId == 2) {
-		int n = 0;  
-	}   
-
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dis(1.0, 100.0);
+    std::uniform_real_distribution<> dis(1.0, 100.0);  // default parameter of the template is double   
+
+	// Set thread name for debugging purposes   
+    std::string name = "Processor_" + std::to_string(processorId);
+    SetThreadDescription(GetCurrentThread(),
+        std::wstring(name.begin(), name.end()).c_str());
+
+	// set break point, the right click then condition processorId == 2, then run the program, the break point will be hit when processorId is 2    
 
     for (int i = 0; i < itemCount; ++i) {
         double value = dis(gen);
