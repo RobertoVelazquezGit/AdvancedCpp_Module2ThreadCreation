@@ -27,11 +27,16 @@ namespace bench {
     }
 
     // Deterministic RNG per thread
+    // The lambda is not stored anywhere; it is created and immediately invoked
+    // to produce the value used to construct the thread-local std::mt19937.
+	// inline means that the variable is defined in a header file and can be included in multiple translation units without violating the One Definition Rule (ODR).
+    // Each translation unit will have its own instance of the variable, but they will all refer to the same underlying object.
+	// thread_local means that each thread will have its own instance of the variable, so that concurrent threads do not interfere with each other's random number generation.  
     inline thread_local std::mt19937 rng{
         [] {
-            static std::mt19937 seeder{12345};
-            static std::mutex m;
-            std::lock_guard<std::mutex> lock(m);
+			static std::mt19937 seeder{12345};  // static is thread safe because it is initialized only once, even in a multithreaded context   
+            static std::mutex m;  
+			std::lock_guard<std::mutex> lock(m);  // to protect the seeder from concurrent access by multiple threads, ensuring that each thread gets a unique seed for its own rng instance.   
             return std::mt19937{seeder()};
         }()
     };
@@ -54,12 +59,14 @@ namespace bench {
     // ---------- Workload helpers ----------
     inline double work_fn(double v) {
         double x = std::sqrt(v * v + 1.0);
-        return std::log1p(x);
+		return std::log1p(x);  // log1p(x) = log(1 + x), more accurate for small x  
     }
 
     std::vector<double> make_data(int n) {
         std::uniform_real_distribution<> dis(1.0, 10.0);
         std::vector<double> data(n);
+		// && for the local variable distribution dis is captured by reference in the lambda function, allowing it to be used within the lambda to generate random numbers. 
+		// it is not necessary for rng because it is thread_local and each thread has its own instance of rng, so there is no risk of data races.
         std::generate(data.begin(), data.end(), [&] { return dis(rng); });
         return data;
     }
@@ -77,8 +84,12 @@ namespace bench {
     double processMultiThreaded(const std::vector<double>& data, unsigned threads) {
         if (threads == 0) threads = 1;
         const unsigned parts = std::min<unsigned>(
-            threads, std::max(1u, std::thread::hardware_concurrency())
+			threads, std::max(1u, std::thread::hardware_concurrency())  // because std::thread::hardware_concurrency() may return 0 if the number of cores cannot be determined 
         );
+
+        if (parts == std::thread::hardware_concurrency()) {
+			int n = 0;  // break point for debugging    
+        }
 
         std::vector<double> partial(parts, 0.0);
         std::vector<std::thread> ths;
@@ -92,7 +103,7 @@ namespace bench {
             double acc = 0.0;
             for (size_t i = begin; i < end; ++i) acc += work_fn(data[i]);
             partial[idx] = acc;
-            };
+			};  // lambda defined but not invoked yet, it will be invoked in the loop below 
 
         size_t start = 0;
         for (unsigned p = 0; p < parts; ++p) {
@@ -131,12 +142,19 @@ namespace bench {
 
         const double diff = std::abs(singleSum - multiSum);
         ts_print("Checksum delta = ", diff);
+		// adding of doubles or float is not associative, so the order in which you add them can affect the final result.
+        // In a multi-threaded context, the order of addition may vary between runs, leading to small discrepancies in the final sum.    
+
     }
 
 } // namespace bench
 
 // ---------- Choose scenarios ----------
 int main() {
+
+	auto n = std::thread::hardware_concurrency();
+    bench::ts_print("Hardware concurrency = ", n); // 12
+
     using namespace bench;
     const int DATA_SIZE = 2'000'000;
 
