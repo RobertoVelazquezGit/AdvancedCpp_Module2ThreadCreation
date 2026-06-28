@@ -20,9 +20,10 @@ namespace bench {
 
     // Thread-safe print
     template <class... Args>
-    void ts_print(Args&&... args) {
+	void ts_print(Args&&... args) {  // universal reference 
         std::lock_guard<std::mutex> lock(ioMutex);
-        (std::cout << ... << args) << std::endl;
+		(std::cout << ... << args) << std::endl;  // fold expression (C++17)    
+		// () parentheses to return a reference to output stream, and then << operator is applied to each argument in the pack  
     }
 
     // Deterministic RNG per thread
