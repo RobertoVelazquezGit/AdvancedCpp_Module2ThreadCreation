@@ -34,6 +34,8 @@ namespace bench {
 	// thread_local means that each thread will have its own instance of the variable, so that concurrent threads do not interfere with each other's random number generation.  
     inline thread_local std::mt19937 rng{
         [] {
+            // as static, created the first time the lambda is called when creating the first rng object. Next times is already created,
+            // that is why in std::mt19937{seeder() gives a different seed
 			static std::mt19937 seeder{12345};  // static is thread safe because it is initialized only once, even in a multithreaded context   
             static std::mutex m;  
 			std::lock_guard<std::mutex> lock(m);  // to protect the seeder from concurrent access by multiple threads, ensuring that each thread gets a unique seed for its own rng instance.   
