@@ -33,7 +33,7 @@ namespace bench {
     // Each translation unit will have its own instance of the variable, but they will all refer to the same underlying object.
 	// thread_local means that each thread will have its own instance of the variable, so that concurrent threads do not interfere with each other's random number generation.  
     inline thread_local std::mt19937 rng{
-        [] {
+        [] () {  // () because this lambda has no parameters, they are optional from c++11
             // These static objects are created the first time the lambda is invoked.
             // Subsequent invocations reuse them, so each call to seeder() produces
             // a different value, giving each thread its own unique RNG seed.
@@ -41,7 +41,7 @@ namespace bench {
             static std::mutex m;  
 			std::lock_guard<std::mutex> lock(m);  // to protect the seeder from concurrent access by multiple threads, ensuring that each thread gets a unique seed for its own rng instance.   
             return std::mt19937{seeder()};
-        }()
+        }()  // lamda executed inmediatelly
     };
 
     // RAII benchmark timer
