@@ -41,7 +41,7 @@ namespace bench {
             static std::mutex m;  
 			std::lock_guard<std::mutex> lock(m);  // to protect the seeder from concurrent access by multiple threads, ensuring that each thread gets a unique seed for its own rng instance.   
             return std::mt19937{seeder()};
-        }()  // lamda executed inmediatelly
+        }()  // lambda executed inmediatelly
     };
 
     // RAII benchmark timer
